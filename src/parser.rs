@@ -49,11 +49,11 @@ impl Parser {
             let tok = tokens[tok_i].clone();
             match tok.0 {
                 Tokens::Function => {
-                    let mut fname = String::new();
+                    let mut identifier = String::new();
                     let mut parameters = Vec::<Expr>::new();
                     let mut ftype = String::from("void");
                     
-                    fname = Self::next(tokens.clone(), &mut tok_i).1;
+                    identifier = Self::next(tokens.clone(), &mut tok_i).1;
                     
                     Self::next(tokens.clone(), &mut tok_i);
                     if tokens[tok_i].0 != Tokens::LParen {
@@ -71,9 +71,33 @@ impl Parser {
                         ftype = Self::next(tokens.clone(), &mut tok_i).1;
                     }
                     
+                    Self::next(tokens.clone(), &mut tok_i);
+                    let lcbrace = tok_i;
+                    Self::get_n(Tokens::RCurlyBrace, tokens.clone(), &mut tok_i);
+                    let rcbrace = tok_i;
+                    let fbody = Self::parse(tokens[rcbrace..lcbrace].to_vec());
+                    
                     expr.push(Expr::Function {
-                        name: fname, args: Self::parse_parameters(tokens[lparen..rparen].to_vec(), &mut parameters), rtype: ftype, body: Vec::new()
+                        name: identifier, args: Self::parse_parameters(tokens[lparen..rparen].to_vec(), &mut parameters), rtype: ftype, body: fbody
                     });
+                }
+                
+                Tokens::Var => {
+                    let mut value = Vec::<Expr>::new();
+                    
+                    let identifer = Self::next(tokens.clone(), &mut tok_i).1;
+                    let mut var_type = String::new();
+                    if Self::next(tokens.clone(), &mut tok_i).0 == Tokens::Colon {
+                        var_type = Self::next(tokens.clone(), &mut tok_i).1;
+                    } else {
+                        error!("Missing colon `:` after variable identifier");
+                    }
+                    
+                    expr.push(Expr::Variable { name: identifer, vtype: var_type, value: Box::new(Expr::Number(32)) });
+                }
+                
+                Tokens::Return => {
+                    
                 }
                 
                 _ => {
@@ -92,11 +116,11 @@ impl Parser {
         tokens[*tok_i].clone()
     }
     
-    fn get_n(tok: Tokens, tokens: Vec<(Tokens, String)>, tok_i: &mut usize) -> (Tokens, String) {
+    fn get_n(tokf: Tokens, tokens: Vec<(Tokens, String)>, tok_i: &mut usize) -> (Tokens, String) {
         let mut index = *tok_i;
         while index < tokens.len() {
             let tok = tokens[index].clone();
-            if tok.0 == tok.0 {
+            if tok.0 == tokf {
                 return tok;
             }
             
